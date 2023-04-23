@@ -32,7 +32,7 @@ void Chat::showStartMenu() {
 
 void Chat::showUserMenu() {
 	while (true) {
-		std::cout << "User Menu:\n Hi, " << _allUserInfo[_currentUser].getName() << ", please choose option!";
+		std::cout << "User Menu:\n Hi, " << _allUserInfo[_currentUser].getName() << ", please choose option!\n";
 		std::cout << "1 - Show Message\n";
 		std::cout << "2 - Send Message\n";
 		std::cout << "3 - Users\n";
@@ -75,7 +75,7 @@ void Chat::login() {
 		std::cout << "Please, choose another name:\nName: ";
 		std::cin >> name;
 	}
-	while (_allUsers.find(login) == _allUsers.end()) {
+	while (_allUsers.find(login) != _allUsers.end()) {
 		std::cout << "Please, choose another login:\nLogin: ";
 		std::cin >> login;
 	}
@@ -107,8 +107,12 @@ void Chat::signUp() {
 }
 
 void Chat::showChat() const {
-	for (const auto& message : _allUserLoginMessageTo.at(_currentUser)) {
-		message.showMessage();
+	if (_allUserLoginMessageTo.find(_currentUser) != _allUserLoginMessageTo.end()) {
+		for (const auto& message : _allUserLoginMessageTo.at(_currentUser)) {
+			message.showMessage();
+		}
+	} else {
+		std::cout << "No messages for you\n";
 	}
 }
 
@@ -121,17 +125,18 @@ void Chat::showAllUsersName() const {
 
 void Chat::sendMessage() {
 	std::string name;
-	while (name.empty() || name != "all" ||_nameToLogin.find(name) == _nameToLogin.end()) {
+	while (name.empty() || (name != "all" && _nameToLogin.find(name) == _nameToLogin.end())) {
 		std::cout << "Choose name or send to all" << std::endl;
 		std::cin >> name;
+		std::cout << "Debug info: name_empty: " << name.empty() << " name:_" << name << "_ _nameToLogin[name] = " << _nameToLogin[name] << std::endl;
 	}
-	std::cout << "Enter the message: ";
+	std::cout << "Enter the message:";
 	std::string text;
-	std::cin >> text;
+	std::getline(std::cin, text);
 	Message msg(_allUserInfo[_currentUser].getName(), name, text);
 	if (name == "all") {
-		for (auto& [key, value] : _allUserLoginMessageTo) {
-			value.push_back(msg);
+		for (auto& user : _allUsers) {
+			_allUserLoginMessageTo[user.second].push_back(msg);
 		}
 	} else {
 		int idTo = _allUsers[_nameToLogin[name]];

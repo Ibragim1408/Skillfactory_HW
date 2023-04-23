@@ -3,6 +3,7 @@
 
 class User {
 public:
+	User() : _login(""), _password("1234"), _name("") {};
 	User(const std::string& login, const std::string& pass, const std::string name)
 		: _login(login), _password(pass), _name(name) {};
 
