@@ -128,7 +128,6 @@ void Chat::sendMessage() {
 	while (name.empty() || (name != "all" && _nameToLogin.find(name) == _nameToLogin.end())) {
 		std::cout << "Choose name or send to all" << std::endl;
 		std::cin >> name;
-		std::cout << "Debug info: name_empty: " << name.empty() << " name:_" << name << "_ _nameToLogin[name] = " << _nameToLogin[name] << std::endl;
 	}
 	std::cout << "Enter the message:";
 	std::string text;
