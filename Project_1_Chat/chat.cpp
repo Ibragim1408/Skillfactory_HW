@@ -189,9 +189,8 @@ void Chat::readFromFile() {
 		User user;
 		while (	userFile >> user) {
 			_nameToLogin[user.getName()] = user.getLogin();
-			_allUsers[user.getName()] = _lastId;
+			_allUsers[user.getName()] = ++_lastId;
 			_allUserInfo[_lastId] = std::move(user);
-			_lastId++;
 		}
 		userFile.close();
 	}
