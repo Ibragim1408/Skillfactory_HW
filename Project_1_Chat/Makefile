@@ -1,2 +1,2 @@
-chat: main.cpp chat.cpp
-	g++ -o chat main.cpp chat.cpp
+chat:
+	g++ -o chat -std=c++17 *.cpp
