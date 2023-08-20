@@ -1,9 +1,16 @@
 #include "chat.h"
 #include <iostream>
+#include <fstream>
+
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void Chat::start() {
 	_isWorking = true;
 	_forbiddenName.insert("all");
+	_forbiddenName.insert("q");
+	readFromFile();
 }
 
 void Chat::showStartMenu() {
@@ -22,6 +29,7 @@ void Chat::showStartMenu() {
 				signUp();
 				return;
 			case '3':
+				writeToFile();
 				_isWorking = false;
 				return;
 			default:
@@ -140,5 +148,67 @@ void Chat::sendMessage() {
 	} else {
 		int idTo = _allUsers[_nameToLogin[name]];
 		_allUserLoginMessageTo[idTo].push_back(msg);
+	}
+}
+
+void Chat::writeToFile() const {
+	std::ofstream userFile( "output_user_file.txt");
+	if (!userFile.is_open()) {
+        std::cout << "Could not open userFile!" << '\n';
+    } else {
+        std::cout << "User File is Opened!" << '\n';
+		for (const auto& users : _allUserInfo) {
+			userFile << users.second << '\n';
+		}
+		userFile.close();
+	}
+
+	std::ofstream messageFile( "output_msg_file.txt");
+	if (!messageFile.is_open()) {
+        std::cout << "Could not open msgFile!" << '\n';
+    } else {
+        std::cout << "Message File is Opened!" << '\n';
+		for (const auto& vMsgs : _allUserLoginMessageTo) {
+			for (const auto& messages : vMsgs.second) {
+				messageFile << messages << '\n';
+			}
+		}
+		messageFile.close();
+	}
+}
+
+void Chat::readFromFile() {
+	std::fstream userFile( "output_user_file.txt");
+	if (!userFile.is_open()) {
+        std::cout << "Could not open userFile!" << '\n';
+    } else {
+		fs::permissions("output_user_file.txt",
+        fs::perms::group_all | fs::perms::others_all, fs::perm_options::remove);
+
+        std::cout << "User File is Opened!" << '\n';
+		User user;
+		while (	userFile >> user) {
+			_nameToLogin[user.getName()] = user.getLogin();
+			_allUsers[user.getName()] = _lastId;
+			_allUserInfo[_lastId] = std::move(user);
+			_lastId++;
+		}
+		userFile.close();
+	}
+
+	std::fstream messageFile( "output_msg_file.txt");
+	if (!messageFile.is_open()) {
+        std::cout << "Could not open msgFile!" << '\n';
+    } else {
+		fs::permissions("output_msg_file.txt",
+        fs::perms::group_all | fs::perms::others_all, fs::perm_options::remove);
+
+        std::cout << "Message File is Opened!" << '\n';
+		Message msg;
+		while(messageFile >> msg) {
+			int to = _allUsers[msg.getTo()];
+			_allUserLoginMessageTo[to].push_back(std::move(msg));
+		}
+		messageFile.close();
 	}
 }

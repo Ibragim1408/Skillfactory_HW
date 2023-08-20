@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 #include <string>
 
 class User {
@@ -15,8 +16,28 @@ public:
 	const std::string& getName() const { return _name; };
 	void changeName(const std::string& newName) { _name = newName; };
 
+	friend std::fstream& operator >>(std::fstream& is, User& obj);
+	friend std::ostream& operator <<(std::ostream& os, const User& obj);
+
 private:
 	std::string _login;
 	std::string _password;
 	std::string _name;
 };
+
+std::fstream& operator >>(std::fstream& is, User& obj)
+{
+	is >> obj._name;
+	is >> obj._login;
+	is >> obj._password;
+	return is;
+}
+std::ostream& operator <<(std::ostream& os, const User& obj)
+{
+	os << obj._name;
+	os << ' ';
+	os << obj._login;
+	os << ' ';
+	os << obj._password;
+	return os;
+}

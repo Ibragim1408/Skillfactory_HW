@@ -1,9 +1,11 @@
 #pragma once
 #include <string>
+#include <fstream>
 #include <iostream>
 
 struct Message {
 public:
+	Message() {};
 	Message(std::string from, std::string to, const std::string data)
 		: _from(from), _to(to), _data(data) {};
 	
@@ -12,8 +14,26 @@ public:
 			  << " to: " << _to << "\n"
 			  << "text: " << _data << std::endl;
 	}
+
+	std::string getTo() const {return _to;}
+
+	friend std::fstream& operator >>(std::fstream& is, Message& obj);
+	friend std::ostream& operator <<(std::ostream& os, const Message& obj);
+
 private:
 	std::string _from;
 	std::string _to;
 	std::string _data;
 };
+
+std::fstream& operator>>(std::fstream& is, Message& obj) {
+	is >> obj._from >> obj._to >> obj._data;
+	return is;
+}
+
+std::ostream& operator <<(std::ostream& os, const Message& obj) {
+	os << obj._from << ' ';
+	os << obj._to << ' ';
+	os << obj._data;
+	return os;
+}
