@@ -2,7 +2,8 @@
 #include<unistd.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
-#include <arpa/inet.h>
+#include<arpa/inet.h>
+#include<cstring>
 
 #include<iostream>
 
@@ -72,7 +73,7 @@ bool create_client_connection() {
 
 std::string sendToServer(std::string msg) {
   bzero(message, sizeof(message));
-  strcpy(message, msg.c_str());
+  std::strcpy(message, msg.c_str());
   if ((strncmp(message, "end", 3)) == 0) {
     write(socket_file_descriptor, message, sizeof(message));
     std::cout << "Client Exit." << std::endl;

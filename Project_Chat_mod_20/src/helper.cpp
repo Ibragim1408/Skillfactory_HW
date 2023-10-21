@@ -102,7 +102,8 @@ std::string HandleMessage(Chat& chat, const std::string& msg) {
 			return "";
 		case ActionType::kUnknownCommand:
 			return "Unknown";
-  }
+    }
+    return "";
 }
 
 std::string PrepareMessage(const Chat& chat, const std::pair<ActionType, std::string>& input) {
@@ -175,4 +176,5 @@ std::string ToString(ActionType act) {
 		case ActionType::kUnknownCommand:
 			return "Unknown";
 	}
+    return "";
 }
