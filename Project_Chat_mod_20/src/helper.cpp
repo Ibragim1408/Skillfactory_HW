@@ -76,7 +76,7 @@ std::string HandleListMessage(Chat& chat, const std::vector<std::string>& parseM
 
 
 
-std::string HandleMessage(Chat& chat, std::string& msg) {
+std::string HandleMessage(Chat& chat, const std::string& msg) {
     if (msg.empty()) {
         chat.closeChat();
         return msg;
@@ -105,6 +105,31 @@ std::string HandleMessage(Chat& chat, std::string& msg) {
   }
 }
 
+std::string PrepareMessage(const Chat& chat, const std::pair<ActionType, std::string>& input) {
+    std::string result = ToString(input.first);
+    if (input.first == ActionType::kSendMessage || input.first == ActionType::kRecieveAllMessage) {
+        result += "&&" + std::to_string(chat.getCurrentUser());
+    }
+    result += "&&" + input.second;
+    return result;
+}
+
+void HandleResponse(Chat& chat, ActionType type, std::string& msg) {
+    if (type == ActionType::kCreateUser || type == ActionType::kLoginUser) {
+        chat.setCurrentUser(std::stoi(msg));
+        if (std::stoi(msg) == -1) {
+            chat.setCurrentUser(0);
+        }
+    } else if (type == ActionType::kSendMessage) {
+        if (msg == "-1") {
+            std::cout << "Message do not send\n";
+        } else {
+            std::cout << "Message successfully send\n";
+        }
+    } else {
+        std::cout << msg;
+    }
+}
 
 ActionType ToActionType(std::string_view sw) {
 	if (sw == "CreateUser") {

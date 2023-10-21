@@ -2,14 +2,14 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 
-#include "helper.h"
-#include "connect.h"
+#include "../src/helper.h"
+#include "../src/connect.h"
 
 int main() {
   Chat chat(ChatObject::kChatServer);
   chat.start();
 
-  create_connection();
+  create_server_connection();
 
   while(chat.isWorking()) {
     bzero(message, MESSAGE_LENGTH);

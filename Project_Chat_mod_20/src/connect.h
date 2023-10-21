@@ -2,6 +2,7 @@
 #include<unistd.h>
 #include<sys/socket.h>
 #include<netinet/in.h>
+#include <arpa/inet.h>
 
 #include<iostream>
 
@@ -13,9 +14,7 @@ socklen_t length;
 int socket_file_descriptor, connection, bind_status, connection_status;
 char message[MESSAGE_LENGTH];
 
-void create_connection();
-
-void create_connection() {
+void create_server_connection() {
   socket_file_descriptor =  socket(AF_INET ,SOCK_STREAM, 0);
   if(socket_file_descriptor == -1){
     std::cout << "Socket creation failed.!" << std::endl;
@@ -47,4 +46,44 @@ void create_connection() {
     std::cout << "Server is unable to accept the data from client.!" << std::endl;
     exit(1);
   }
+}
+
+bool create_client_connection() {
+  // Создадим сокет
+  socket_file_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+  if(socket_file_descriptor == -1){
+    std::cout << "Creation of Socket failed!" << std::endl;
+      exit(1);
+  }
+  // Установим адрес сервера
+  serveraddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+  // Зададим номер порта
+  serveraddress.sin_port = htons(PORT);
+  // Используем IPv4
+  serveraddress.sin_family = AF_INET;
+  // Установим соединение с сервером
+  connection = connect(socket_file_descriptor, (struct sockaddr*)&serveraddress, sizeof(serveraddress));
+  if(connection == -1){
+    std::cout << "Connection with the server failed.!" << std::endl;
+    exit(1);
+  }
+  return true;
+}
+
+std::string sendToServer(std::string msg) {
+  bzero(message, sizeof(message));
+  strcpy(message, msg.c_str());
+  if ((strncmp(message, "end", 3)) == 0) {
+    write(socket_file_descriptor, message, sizeof(message));
+    std::cout << "Client Exit." << std::endl;
+  }
+  ssize_t bytes = write(socket_file_descriptor, message, sizeof(message));
+  // Если передали >= 0  байт, значит пересылка прошла успешно
+  if(bytes >= 0) {
+    std::cout << "Data send to the server successfully.!" << std::endl;
+  }
+  bzero(message, sizeof(message));
+  // Ждем ответа от сервера
+  read(socket_file_descriptor, message, sizeof(message));
+  return std::string(message);
 }
