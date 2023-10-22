@@ -18,7 +18,7 @@ int Chat::createUser(const std::string& login, const std::string& password, cons
 	int newID = ++_lastId;
 	_allUsers[login] = newID;
 	_nameToLogin[name] = login;
-	InsertUser(newID, User(login, password, name));
+	InsertUser(newID, User(login, password, name), _mysql);
 	_currentUser = newID;
 	return newID;
 }
@@ -29,7 +29,7 @@ int Chat::login(const std::string& login, const std::string& password){
 		return -1;
 	}
 	int currentID = _allUsers[login];
-	if (auto user = SelectUser(currentID); user.has_value() && password != user.value().getPassword()) {
+	if (auto user = SelectUser(currentID, _mysql); user.has_value() && password != user.value().getPassword()) {
 		return -1;
 	}
 	_currentUser = currentID;
@@ -45,11 +45,11 @@ int Chat::sendMessage(const std::string& name_from, const std::string& name_to, 
 		for (const auto& [name, login] : _nameToLogin) {
 			if (name_from == name) continue;
 			Message msg(name_from, name, text);
-			InsertMessage(msg);
+			InsertMessage(msg, _mysql);
 		}
 	} else {
 		Message msg(name_from, name_to, text);
-		InsertMessage(msg);
+		InsertMessage(msg, _mysql);
 	}
 	return 1;
 }
@@ -65,12 +65,12 @@ std::string Chat::getUserList() {
 std::vector<Message> Chat::getMessageFrom(const std::string& name_current, const std::string& name_from) {
 	int current_id = _allUsers[_nameToLogin[name_current]];
 	int id_from = _allUsers[_nameToLogin[name_from]];
-	return SelectMessagesFromTo(current_id, id_from);
+	return SelectMessagesFromTo(current_id, id_from, _mysql);
 }
 
 std::vector<Message> Chat::getMessageFromAll(const std::string& name_current) {
 	int current_id = _allUsers[_nameToLogin[name_current]];
-	return SelectMessagesTo(current_id);
+	return SelectMessagesTo(current_id, _mysql);
 }
 
 bool Chat::isNameExist(const std::string &name) {
@@ -117,7 +117,7 @@ std::pair<ActionType, std::string> Chat::showStartMenu() {
 
 std::pair<ActionType, std::string> Chat::showUserMenu() {
 	while (true) {
-		std::cout << "User Menu:\n Hi, " << SelectUser(_currentUser).value().getName() << ", please choose option!\n";
+		std::cout << "User Menu:\n Hi, " << SelectUser(_currentUser, _mysql).value().getName() << ", please choose option!\n";
 		std::cout << "1 - Show Message From\n";
 		std::cout << "2 - Send Message\n";
 		std::cout << "3 - Users\n";
@@ -203,9 +203,9 @@ std::string Chat::sendMessageTo() {
 }
 
 void Chat::readFromDB() {
-	const auto& res = SelectAllUsers();
+	const auto& res = SelectAllUsers(_mysql);
 	for (const auto& [id, user] : res) {
-		_nameToLogin[user.getName] = user.getLogin();
+		_nameToLogin[user.getName()] = user.getLogin();
 		_allUsers[user.getLogin()] = id;
 	}
 }

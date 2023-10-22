@@ -1,21 +1,28 @@
 #include "sql.h"
 
 #include <iostream>
+#include <sstream>
+#include <utility>
 #include <format>
 #include <chrono>
 #include <ctime>
 #include <cstdlib>
 #include <string>
 
+
 void CreateDB(MYSQL& mysql) {
-    auto *result = mysql->executeQuery("SHOW DATABASES");
+    MYSQL_RES* res;
+    MYSQL_ROW row;
+    mysql_query(&mysql, "SHOW DATABASES");
     bool db_exists = false;
     // Перебираем строки результата
-    while (result->next()) {
-        std::string db_name = result->getString(1);
-        if (db_name == kDB_NAME) {
-            db_exists = true;
-            break;
+    if (res = mysql_store_result(&mysql)) {
+        while (row = mysql_fetch_row(res)) {
+            std::string db_name = row[0];
+            if (db_name == kDB_NAME) {
+                db_exists = true;
+                break;
+            }
         }
     }
     if (!db_exists && !mysql_query(&mysql, std::format("CREATE DATABASE {}", kDB_NAME).c_str())) {
@@ -23,15 +30,19 @@ void CreateDB(MYSQL& mysql) {
     }
 }
 
-void CreateTable(MYSQL& mysql, const std::string& table_name, const std::string& table_options) {
-    auto *result = mysql->executeQuery("SHOW TABLES");
+void CreateTable(MYSQL& mysql, const std::string_view& table_name, const std::string_view& table_options) {
+    MYSQL_RES* res;
+    MYSQL_ROW row;
+    mysql_query(&mysql, "SHOW TABLES");
     bool tb_exists = false;
     // Перебираем строки результата
-    while (result->next()) {
-        std::string tb_name = result->getString(1);
-        if (tb_name == table_name) {
-            tb_exists = true;
-            break;
+    if (res = mysql_store_result(&mysql)) {
+        while (row = mysql_fetch_row(res)) {
+            std::string tb_name = row[0];
+            if (tb_name == table_name) {
+                tb_exists = true;
+                break;
+            }
         }
     }
     if (!tb_exists) {
@@ -47,29 +58,27 @@ bool CreateSQLConnection(MYSQL& mysql) {
         printf("Ошибка подключения: %s\n", mysql_error(&mysql));
         return false;
     }
-    if (!CreateDB(mysql)) {
-        return false;
-    }
+    CreateDB(mysql);
     mysql_set_character_set(&mysql, "utf8");
     CreateTable(mysql, kTB_USERS, USERS_OPT);
     CreateTable(mysql, kTB_MESSAGES, MESSAGES_OPT);
     return true;
 }
 
-std::vector<std::pair<int, User>> SelectAllUsers() {
+std::vector<std::pair<int, User>> SelectAllUsers(MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {}", kTB_USERS).c_str());
     std::vector<std::pair<int, User>> result;
     if (res = mysql_store_result(&mysql)) {
 		while (row = mysql_fetch_row(res)) {
-            result.emplace_back(row[0], User(row[2], row[3], row[1]));
+            result.push_back(std::make_pair(std::atoi(row[0]), User(row[2], row[3], row[1])));
 		}
 	}
     return result;
 }
 
-std::optional<User> SelectUser(int id) {
+std::optional<User> SelectUser(int id, MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {} WHERE id={}", kTB_USERS,id).c_str());
@@ -80,7 +89,7 @@ std::optional<User> SelectUser(int id) {
     return std::nullopt;
 }
 
-int SelectUserByName(std::string name) {
+int SelectUserByName(const std::string& name, MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {} WHERE username='{}'", kTB_USERS, name).c_str());
@@ -92,12 +101,12 @@ int SelectUserByName(std::string name) {
 }
 
 
-int InsertUser(int id, const User& user) {
+int InsertUser(int id, const User& user, MYSQL& mysql) {
     return mysql_query(&mysql, std::format("INSERT INTO {}(id, username, login, password) values({}, {}, {}, {}')",
                 kTB_USERS, id, user.getName(), user.getLogin(), user.getPassword()).c_str());
 }
 
-std::vector<Message> SelectAllMessages() {
+std::vector<Message> SelectAllMessages(MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {}", kTB_MESSAGES).c_str());
@@ -110,7 +119,7 @@ std::vector<Message> SelectAllMessages() {
     return result;
 }
 
-std::vector<Message> SelectMessagesTo(int id) {
+std::vector<Message> SelectMessagesTo(int id, MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {} WHERE id_user_to='{}'", kTB_MESSAGES, id).c_str());
@@ -122,7 +131,7 @@ std::vector<Message> SelectMessagesTo(int id) {
 	}
     return result;
 }
-std::vector<Message> SelectMessagesFromTo(int id_to, int id_from) {
+std::vector<Message> SelectMessagesFromTo(int id_to, int id_from, MYSQL& mysql) {
     MYSQL_RES* res;
     MYSQL_ROW row;
     mysql_query(&mysql, std::format("SELECT * FROM {} WHERE id_user_to='{}' AND id_user_from='{}'", 
@@ -136,11 +145,12 @@ std::vector<Message> SelectMessagesFromTo(int id_to, int id_from) {
     return result;
 }
 
-int InsertMessage(const Message& msg) {
-    int id_from = SelectUserByName(msg.getFrom());
-    int  id_to = SelectUserByName(msg.getTo());
-    auto start = std::chrono::system_clock::now();
-    std::string timestamp = std::to_string(start);
+int InsertMessage(const Message& msg, MYSQL& mysql) {
+    int id_from = SelectUserByName(msg.getFrom(), mysql);
+    int  id_to = SelectUserByName(msg.getTo(), mysql);
+    std::stringstream start;
+    start << std::chrono::system_clock::now();
+    std::string timestamp(start.str());
     return mysql_query(&mysql, std::format("INSERT INTO {}(id_msg, id_user_from, id_user_to, text, created) values(default, {}, {}, {}, {}')",
                 kTB_MESSAGES,  id_from, id_to, msg.getText(), timestamp).c_str());
 }
