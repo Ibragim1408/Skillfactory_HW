@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "../src/chat.h"
+#include "src/chat.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -30,7 +30,7 @@ private slots:
   void updateChats();
 
 private:
-  Chat chat_;
   Ui::MainWindow *ui;
+  Chat chat_;
 };
 #endif // MAINWINDOW_H
