@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>836</width>
+    <height>605</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Your Message</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="msgLineEdit"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="sendMessageToAllButton">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Send to All</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="sendMessageToButton">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Send Private</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QSplitter" name="splitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QTextBrowser" name="CommonChatBrowser"/>
+      <widget class="QTextBrowser" name="PrivsteChatBrowser"/>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>836</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuMain_menu">
+    <property name="title">
+     <string>Main menu</string>
+    </property>
+    <addaction name="actionOpen_another_client"/>
+    <addaction name="separator"/>
+    <addaction name="actionCloseClient"/>
+   </widget>
+   <addaction name="menuMain_menu"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionOpen_another_client">
+   <property name="text">
+    <string>Open another client</string>
+   </property>
+  </action>
+  <action name="actionCloseClient">
+   <property name="text">
+    <string>Close Client</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
