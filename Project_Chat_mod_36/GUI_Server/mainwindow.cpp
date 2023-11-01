@@ -4,6 +4,7 @@
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
   , ui(new Ui::MainWindow)
+  , chat_(Chat())
 {
   ui->setupUi(this);
 }
@@ -14,15 +15,13 @@ MainWindow::~MainWindow()
 }
 
 
-void MainWindow::on_BanButton_clicked()
-{
-
+void MainWindow::on_BanButton_clicked() {
+  chat_.ChangeUserStatus(name, "Ban");
 }
 
 
-void MainWindow::on_UnbanButton_clicked()
-{
-
+void MainWindow::on_UnbanButton_clicked() {
+  chat_.ChangeUserStatus(name, "Unban");
 }
 
 

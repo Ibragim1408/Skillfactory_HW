@@ -1,149 +1,72 @@
 #include "chat.h"
-#include "sql.h"
 #include <iostream>
-#include <sstream>
+#include <fstream>
+
 #include <filesystem>
 
-
-int Chat::createUser(const std::string& login, const std::string& password, const std::string& name) {
-	if (_forbiddenName.find(name) != _forbiddenName.end()) {
-		return -1;
-	}
-	if (_allUsers.find(login) != _allUsers.end()) {
-		return -1;
-	}
-	if (_nameToLogin.find(name) != _nameToLogin.end()) {
-		return -1;
-	}
-	int newID = ++_lastId;
-	_allUsers[login] = newID;
-	_nameToLogin[name] = login;
-	InsertUser(newID, User(login, password, name), _mysql);
-	_currentUser = newID;
-	return newID;
-}
-
-int Chat::login(const std::string& login, const std::string& password){
-	if (login == "q") return -1;
-	if (_allUsers.find(login) == _allUsers.end()) {
-		return -1;
-	}
-	int currentID = _allUsers[login];
-	if (auto user = SelectUser(currentID, _mysql); user.has_value() && password != user.value().getPassword()) {
-		return -1;
-	}
-	_currentUser = currentID;
-	return currentID;
-}
-
-int Chat::sendMessage(const std::string& name_from, const std::string& name_to, const std::string& text) {
-	if (name_to != "all" && _nameToLogin.find(name_to) == _nameToLogin.end()) {
-		return -1;
-	}
-	int currentID = _allUsers[_nameToLogin[name_from]];
-	if (name_to == "all") {
-		for (const auto& [name, login] : _nameToLogin) {
-			if (name_from == name) continue;
-			Message msg(name_from, name, text);
-			InsertMessage(msg, _mysql);
-		}
-	} else {
-		Message msg(name_from, name_to, text);
-		InsertMessage(msg, _mysql);
-	}
-	return 1;
-}
-
-std::string Chat::getUserList() {
-	std::stringstream stream;
-	for (const auto& name : _nameToLogin) {
-		stream << name.first << " ";
-	}
-	return stream.str();
-}
-
-std::vector<Message> Chat::getMessageFrom(const std::string& name_current, const std::string& name_from) {
-	int current_id = _allUsers[_nameToLogin[name_current]];
-	int id_from = _allUsers[_nameToLogin[name_from]];
-	return SelectMessagesFromTo(current_id, id_from, _mysql);
-}
-
-std::vector<Message> Chat::getMessageFromAll(const std::string& name_current) {
-	int current_id = _allUsers[_nameToLogin[name_current]];
-	return SelectMessagesTo(current_id, _mysql);
-}
-
-bool Chat::isNameExist(const std::string &name) {
-    return (_nameToLogin.find(name) != _nameToLogin.end());
-}
-
-void Chat::closeChat() {
-	//writeToFile();
-    mysql_close(&_mysql);
-    _isWorking = false;
-}
+namespace fs = std::filesystem;
 
 void Chat::start() {
 	_isWorking = true;
 	_forbiddenName.insert("all");
 	_forbiddenName.insert("q");
-	if (_type == ChatObject::kChatServer) {
-		CreateSQLConnection(_mysql);
-	}
-	readFromDB();
+	readFromFile();
 }
 
-std::pair<ActionType, std::string> Chat::showStartMenu() {
+void Chat::showStartMenu() {
 	while (true) {
 		std::cout << "Choose option:\n";
-		std::cout << "1 - Create User\n";
-		std::cout << "2 - Log In\n";
+		std::cout << "1 - Login\n";
+		std::cout << "2 - Sign up\n";
 		std::cout << "3 - Quit\n";
 		char option;
 		std::cin >> option;
 		switch (option) {
 			case '1':
-				return std::make_pair(ActionType::kCreateUser, clientCreateUser());
+				login();
+				return;
 			case '2':
-				return std::make_pair(ActionType::kLoginUser, logIn());
+				signUp();
+				return;
 			case '3':
+				writeToFile();
 				_isWorking = false;
-				return std::make_pair(ActionType::kCloseChat, "");
+				return;
 			default:
 				continue;
 		}
 	}
 }
 
-std::pair<ActionType, std::string> Chat::showUserMenu() {
+void Chat::showUserMenu() {
 	while (true) {
-		std::cout << "User Menu:\n Hi, " << SelectUser(_currentUser, _mysql).value().getName() << ", please choose option!\n";
-		std::cout << "1 - Show Message From\n";
+		std::cout << "User Menu:\n Hi, " << _allUserInfo[_currentUser].getName() << ", please choose option!\n";
+		std::cout << "1 - Show Message\n";
 		std::cout << "2 - Send Message\n";
 		std::cout << "3 - Users\n";
-		std::cout << "4 - Show All Message to Me";
 		std::cout << "9 - Sign Out" << std::endl;
 		char option;
 		std::cin >> option;
 		switch (option) {
 		case '1':
-			return std::make_pair(ActionType::KRecieveMessageFrom, showChatFrom());
+			showChat();
+			return;
 		case '2':
-			return std::make_pair(ActionType::kSendMessage, sendMessageTo());
+			sendMessage();
+			return;
 		case '3':
-			return std::make_pair(ActionType::kUserList, "userList");
-		case '4':
-			return std::make_pair(ActionType::kRecieveAllMessage, "message from all");
+			showAllUsersName();
+			break;
 		case '9':
 			_currentUser = 0;
-			return std::make_pair(ActionType::kSendMessage, "");;
+			return;
 		default:
 			continue;
 		}
 	}
 }
 
-std::string Chat::clientCreateUser() {
+void Chat::login() {
 	std::string login;
 	std::string password;
 	std::string name;
@@ -160,52 +83,135 @@ std::string Chat::clientCreateUser() {
 		std::cout << "Please, choose another name:\nName: ";
 		std::cin >> name;
 	}
-	std::stringstream stream;
-	stream << login << "$$" << password << "$$" << name;
-	return stream.str();
+	while (_allUsers.find(login) != _allUsers.end()) {
+		std::cout << "Please, choose another login:\nLogin: ";
+		std::cin >> login;
+	}
+	int newID = ++_lastId;
+	_allUsers[login] = newID;
+	_nameToLogin[name] = login;
+	_allUserInfo[newID] = std::move(User(login, password, name));
+	_currentUser = newID;
 }
 
-std::string Chat::logIn() {
+void Chat::signUp() {
 	std::cout << "Please, enter login and password or q for exit to Start Menu:\n";
-	std::string result;
-	std::string password;
+	std::string login;
+	std::string password;	
 	std::cout << "Login: ";
-	std::cin >> result;
-	if (result == "q") {
-		return "";
+	std::cin >> login;
+	if (login == "q") return;
+	while (_allUsers.find(login) == _allUsers.end()) {
+		std::cout << "Login not found:\nLogin: ";
+		std::cin >> login;
 	}
-	while (password.size() <= 4 ) {
+	int currentID = _allUsers[login];
+	while (password.size() <= 4 || password != _allUserInfo[currentID].getPassword()) {
 		std::cout << "Password( more then 4 symbols): ";
 		std::cin >> password;
-		if (password == "q") return "";
+		if (password == "q") return ;
 	}
-	result += "$$" + password;
-	return result;
+	_currentUser = currentID;
 }
 
-std::string Chat::showChatFrom() const {
-	std::cout << "Please, enter NAME to see messages from this User:\n";
-	std::string result;
-	std::cin >> result;
-	return result;
+void Chat::showChat() const {
+	if (_allUserLoginMessageTo.find(_currentUser) != _allUserLoginMessageTo.end()) {
+		for (const auto& message : _allUserLoginMessageTo.at(_currentUser)) {
+			message.showMessage();
+		}
+	} else {
+		std::cout << "No messages for you\n";
+	}
 }
 
-std::string Chat::sendMessageTo() {
+void Chat::sendMessage() {
 	std::string name;
-	while (name.empty() || (name != "all")) {
+	while (name.empty() || (name != "all" && _nameToLogin.find(name) == _nameToLogin.end())) {
 		std::cout << "Choose name or send to all" << std::endl;
 		std::cin >> name;
 	}
 	std::cout << "Enter the message:";
 	std::string text;
 	std::getline(std::cin, text);
-	return name + "&&" + text;
+	Message msg(_allUserInfo[_currentUser].getName(), name, text);
+	if (name == "all") {
+		for (auto& user : _allUsers) {
+			_allUserLoginMessageTo[user.second].push_back(msg);
+		}
+	} else {
+		int idTo = _allUsers[_nameToLogin[name]];
+		_allUserLoginMessageTo[idTo].push_back(msg);
+	}
 }
 
-void Chat::readFromDB() {
-	const auto& res = SelectAllUsers(_mysql);
-	for (const auto& [id, user] : res) {
-		_nameToLogin[user.getName()] = user.getLogin();
-		_allUsers[user.getLogin()] = id;
+void Chat::writeToFile() const {
+	std::ofstream userFile( "output_user_file.txt");
+	if (!userFile.is_open()) {
+        std::cout << "Could not open userFile!" << '\n';
+    } else {
+        std::cout << "User File is Opened!" << '\n';
+		for (const auto& users : _allUserInfo) {
+			userFile << users.second << '\n';
+		}
+		userFile.close();
 	}
+
+	std::ofstream messageFile( "output_msg_file.txt");
+	if (!messageFile.is_open()) {
+        std::cout << "Could not open msgFile!" << '\n';
+    } else {
+        std::cout << "Message File is Opened!" << '\n';
+		for (const auto& vMsgs : _allUserLoginMessageTo) {
+			for (const auto& messages : vMsgs.second) {
+				messageFile << messages << '\n';
+			}
+		}
+		messageFile.close();
+	}
+}
+
+void Chat::readFromFile() {
+	std::fstream userFile( "output_user_file.txt");
+	if (!userFile.is_open()) {
+        std::cout << "Could not open userFile!" << '\n';
+    } else {
+		fs::permissions("output_user_file.txt",
+        fs::perms::group_all | fs::perms::others_all, fs::perm_options::remove);
+
+        std::cout << "User File is Opened!" << '\n';
+		User user;
+		while (	userFile >> user) {
+			_nameToLogin[user.getName()] = user.getLogin();
+			_allUsers[user.getName()] = ++_lastId;
+			_allUserInfo[_lastId] = std::move(user);
+		}
+		userFile.close();
+	}
+
+	std::fstream messageFile( "output_msg_file.txt");
+	if (!messageFile.is_open()) {
+        std::cout << "Could not open msgFile!" << '\n';
+    } else {
+		fs::permissions("output_msg_file.txt",
+        fs::perms::group_all | fs::perms::others_all, fs::perm_options::remove);
+
+        std::cout << "Message File is Opened!" << '\n';
+		Message msg;
+		while(messageFile >> msg) {
+			int to = _allUsers[msg.getTo()];
+			_allUserLoginMessageTo[to].push_back(std::move(msg));
+		}
+		messageFile.close();
+	}
+}
+
+bool Chat::ChangeUserStatus(const std::string& name, const std::string& st) {
+	if (auto it = _nameToLogin.find(name); it != _nameToLogin.end()) {
+		int id = _allUsers[it->second];
+		_allUserInfo[id].setStatus(st);
+		return true;
+	}
+	int id = _allUsers[_nameToLogin[name]];
+	_allUserInfo[id].setStatus(st);
+	return true;
 }
