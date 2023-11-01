@@ -17,7 +17,7 @@ public:
 	void changeName(const std::string& newName) { _name = newName; };
 
 	void setStatus(const std::string& st) {_status = st;}
-	std::string getStatus() {return _status;}
+	std::string getStatus() const {return _status;}
 
 	friend std::fstream& operator >>(std::fstream& is, User& obj);
 	friend std::ostream& operator <<(std::ostream& os, const User& obj);

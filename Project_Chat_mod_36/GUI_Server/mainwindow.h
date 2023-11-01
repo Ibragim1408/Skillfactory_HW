@@ -17,11 +17,17 @@ public:
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
+signals:
+  void UpdateUserList();
+  void UpdateMessages();
+
 private slots:
   void on_BanButton_clicked();
   void on_UnbanButton_clicked();
   void on_UpdateMessage_clicked();
   void on_updateUserButton_clicked();
+  void updateUsers();
+  void updateChats();
 
 private:
   Chat chat_;

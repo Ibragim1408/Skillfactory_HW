@@ -1,6 +1,7 @@
 #include "chat.h"
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include <filesystem>
 
@@ -211,7 +212,23 @@ bool Chat::ChangeUserStatus(const std::string& name, const std::string& st) {
 		_allUserInfo[id].setStatus(st);
 		return true;
 	}
-	int id = _allUsers[_nameToLogin[name]];
-	_allUserInfo[id].setStatus(st);
-	return true;
+	return false;
+}
+
+std::string Chat::GetAllMessages() const {
+	std::stringstream result;
+	for (const auto& [id, msgs] : _allUserLoginMessageTo) {
+		for (const auto& msg : msgs) {
+			result << msg << "\n";
+		}
+	}
+	return result.str();
+}
+
+std::string Chat::GetAllUsers() const {
+	std::stringstream result;
+	for (const auto& [id, user] : _allUserInfo) {
+		result << user.getName() << " " << user.getStatus() << "\n";
+	}
+	return result.str();
 }
