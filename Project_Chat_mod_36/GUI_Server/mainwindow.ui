@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>668</width>
-    <height>563</height>
+    <width>820</width>
+    <height>649</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -70,6 +70,19 @@
         </property>
         <property name="text">
          <string>Unban user</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="updateUserButton">
+        <property name="minimumSize">
+         <size>
+          <width>115</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Update user list</string>
         </property>
        </widget>
       </item>

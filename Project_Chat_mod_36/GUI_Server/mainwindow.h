@@ -20,6 +20,7 @@ private slots:
   void on_BanButton_clicked();
   void on_UnbanButton_clicked();
   void on_UpdateMessage_clicked();
+  void on_updateUserButton_clicked();
 
 private:
   Ui::MainWindow *ui;
